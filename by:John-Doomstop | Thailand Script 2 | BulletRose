@@ -1,0 +1,321 @@
+-- [[ JOHN'S CHAOS HUB - THAI EDITION V10 FULL ]]
+-- By: JOHN
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Kill V10",
+    LoadingTitle = "By: JOHN",
+    LoadingSubtitle = "๐",
+    ConfigurationSaving = { Enabled = true, FolderName = "JohnHubConfig", FileName = "ChaosHub" },
+    KeySystem = false
+})
+
+-- [[ เธเธฒเธฃเธ•เธฑเนเธเธเนเธฒเน€เธฃเธดเนเธกเธ•เนเธ ]]
+local _G = {
+    AutoBuySave = false, 
+    AutoGetGun = false,
+    AutoShoot = false,
+    V2Shoot = false,
+    V2Mode = "1 เธเธฃเธฐเธเธญเธ",
+    AntiFriend = false,
+    AutoOrbit = false,
+    SpecificTarget = "",
+    AimPart = "HumanoidRootPart",
+    FloatingColor = Color3.fromRGB(150, 0, 255),
+    RainbowMode = false,
+    ShowTracer = false,
+    TracerColor = Color3.fromRGB(255, 255, 255),
+    TracerRainbow = false,
+    -- [ Whitelist Owner ]
+    OwnerName = "Libbyeli1091"
+}
+
+local Player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+
+-- [[ เธฃเธฐเธเธเธชเธตเธฃเธธเนเธ ]]
+local rainbowColor = Color3.fromRGB(150, 0, 255)
+local tracerRainbowColor = Color3.fromRGB(255, 255, 255)
+task.spawn(function()
+    local h = 0
+    while task.wait() do
+        h = h + 0.005
+        if h > 1 then h = 0 end
+        if _G.RainbowMode then rainbowColor = Color3.fromHSV(h, 0.8, 1) end
+        if _G.TracerRainbow then tracerRainbowColor = Color3.fromHSV(h, 0.8, 1) end
+    end
+end)
+
+-- [[ เธฃเธฐเธเธ Drawing เธชเธณเธซเธฃเธฑเธเน€เธชเนเธเธเธตเนเน€เธเนเธฒ ]]
+local TracerLine = Drawing.new("Line")
+TracerLine.Visible = false
+TracerLine.Thickness = 1.5
+TracerLine.Transparency = 1
+
+-- [[ เธเธฑเธเธเนเธเธฑเธเธเนเธงเธขเน€เธซเธฅเธทเธญ ]]
+local function isFriend(targetPlayer)
+    if targetPlayer.Name == _G.OwnerName then return true end
+    if not _G.AntiFriend then return false end
+    return Player:IsFriendsWith(targetPlayer.UserId)
+end
+
+local function getBestTarget()
+    if _G.SpecificTarget ~= "" then
+        for _, p in pairs(game.Players:GetPlayers()) do
+            if p.Name == _G.OwnerName then continue end
+            if string.find(string.lower(p.Name), string.lower(_G.SpecificTarget)) or string.find(string.lower(p.DisplayName), string.lower(_G.SpecificTarget)) then
+                if p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+                    return p
+                end
+            end
+        end
+    end
+
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+        if v ~= Player and v.Character and v.Character:FindFirstChild(_G.AimPart) 
+           and v.Character:FindFirstChild("Humanoid") 
+           and v.Character.Humanoid.Health > 0 
+           and not isFriend(v) then
+            local distance = (v.Character[_G.AimPart].Position - Player.Character.HumanoidRootPart.Position).Magnitude
+            if distance < shortestDistance then
+                shortestDistance = distance
+                closestPlayer = v
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function isSafeToShoot(targetPos)
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return false end
+    local origin = Player.Character.HumanoidRootPart.Position
+    local direction = (targetPos - origin).Unit * (targetPos - origin).Magnitude
+    local rayParam = RaycastParams.new()
+    rayParam.FilterDescendantsInstances = {Player.Character}
+    rayParam.FilterType = Enum.RaycastFilterType.Exclude
+    local result = workspace:Raycast(origin, direction, rayParam)
+    if result and result.Distance < 3 then return false end
+    return true
+end
+
+RunService.RenderStepped:Connect(function()
+    if _G.ShowTracer then
+        local t = getBestTarget()
+        if t and t.Character and t.Character:FindFirstChild(_G.AimPart) then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(t.Character[_G.AimPart].Position)
+            if onScreen then
+                TracerLine.From = Vector2.new(Camera.ViewportSize.X / 2, 0)
+                TracerLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                TracerLine.Color = _G.TracerRainbow and tracerRainbowColor or _G.TracerColor
+                TracerLine.Visible = true
+            else TracerLine.Visible = false end
+        else TracerLine.Visible = false end
+    else TracerLine.Visible = false end
+end)
+
+-- [[ เธเธฑเธเธเนเธเธฑเธเธชเธฃเนเธฒเธ GUI เธฅเธญเธข ]]
+local function createFloatingGUI(name, flag, special)
+    local ScreenGui = Instance.new("ScreenGui")
+    local Frame = Instance.new("Frame")
+    local Button = Instance.new("TextButton")
+    local Label = Instance.new("TextLabel")
+    local UIStroke = Instance.new("UIStroke")
+    
+    ScreenGui.Name = "Floating_" .. name
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    Frame.Name = "MainFrame"
+    Frame.Parent = ScreenGui
+    Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Frame.Position = UDim2.new(0.5, -50, 0.5, -20)
+    Frame.Size = special and UDim2.new(0, 140, 0, 75) or UDim2.new(0, 110, 0, 50)
+    Frame.Active = true
+    Frame.Draggable = true
+
+    UIStroke.Parent = Frame
+    UIStroke.Thickness = 2
+    task.spawn(function()
+        while Frame.Parent do
+            UIStroke.Color = _G.RainbowMode and rainbowColor or _G.FloatingColor
+            task.wait()
+        end
+    end)
+
+    Label.Parent = Frame
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.BackgroundTransparency = 1
+    Label.Text = name
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.TextSize = 12
+    Label.Font = Enum.Font.GothamBold
+
+    Button.Parent = Frame
+    Button.Position = special and UDim2.new(0.1, 0, 0.65, 0) or UDim2.new(0.1, 0, 0.45, 0)
+    Button.Size = special and UDim2.new(0.8, 0, 0.28, 0) or UDim2.new(0.8, 0, 0.45, 0)
+    Button.Text = _G[flag] and "ON" or "OFF"
+    Button.BackgroundColor3 = _G[flag] and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(40, 40, 40)
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.BorderSizePixel = 0
+
+    Button.MouseButton1Click:Connect(function()
+        _G[flag] = not _G[flag]
+        Button.Text = _G[flag] and "ON" or "OFF"
+        Button.BackgroundColor3 = _G[flag] and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(40, 40, 40)
+    end)
+
+    if special then
+        local Input = Instance.new("TextBox")
+        Input.Parent = Frame
+        Input.Size = UDim2.new(0.9, 0, 0.35, 0)
+        Input.Position = UDim2.new(0.05, 0, 0.25, 0)
+        Input.PlaceholderText = "เธฃเธฐเธเธธเธเธทเนเธญเน€เธเนเธฒเธซเธกเธฒเธข..."
+        Input.Text = _G.SpecificTarget
+        Input.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+        Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Input.TextSize = 10
+        Input.FocusLost:Connect(function() _G.SpecificTarget = Input.Text end)
+    end
+
+    local hTime = 0
+    Button.MouseButton1Down:Connect(function() hTime = tick() end)
+    Button.MouseButton1Up:Connect(function() if tick() - hTime > 1.5 then ScreenGui:Destroy() end end)
+end
+
+-- [[ เธชเธฃเนเธฒเธ Tabs ]]
+local Tab1 = Window:CreateTab("เธเธฑเธ”เธเธฒเธฃเธเธฅเธฑเธเนเธชเธ", 4483362458)
+local Tab2 = Window:CreateTab("เนเธเธกเธ•เธตเธชเธฑเธเธซเธฒเธฃ", 4483362458)
+local Tab3 = Window:CreateTab("เธ•เธฑเนเธเธเนเธฒเธเธงเธฒเธกเธเธฅเธญเธ”เธ เธฑเธข", 4483362458)
+local Tab4 = Window:CreateTab("เน€เธเธฅเธทเนเธญเธเธ—เธตเนเธเธงเธฒเธกเน€เธฃเนเธงเธชเธนเธ", 4483362458)
+local Tab5 = Window:CreateTab("GUI เธฅเธญเธข", 4483362458)
+local Tab6 = Window:CreateTab("เน€เธชเนเธเธเธตเนเน€เธเนเธฒ", 4483362458)
+
+-- Tab 1: เธญเธญเนเธ•เนเธ”เธนเธเธเธทเธ
+local function runAutoDup()
+    if not _G.AutoBuySave then return end
+    local targetPos, dist = Vector3.new(-76.84, 162.67, 231.24), 3
+    local closestClick = nil
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("ClickDetector") and v.Parent:IsA("BasePart") and (v.Parent.Position - targetPos).Magnitude < dist then 
+            closestClick = v 
+            break 
+        end
+    end
+    if closestClick then
+        for i = 1, 10 do
+            if not _G.AutoBuySave then break end
+            fireclickdetector(closestClick)
+            task.wait(0.1)
+            if Player.Character and Player.Character:FindFirstChild("Humanoid") then
+                Player.Character.Humanoid:UnequipTools()
+            end
+            game:GetService("ReplicatedStorage").ToolStorage.ToolsStorage:FireServer("Save", "Gun")
+            task.wait(0.1)
+        end
+        for i = 1, 15 do 
+            game:GetService("ReplicatedStorage").ToolStorage.ToolsStorage:FireServer("Get", "Gun")
+            task.wait(0.05)
+        end
+    end
+end
+
+Tab1:CreateToggle({
+    Name = "เธญเธญเนเธ•เนเธ”เธนเธเธเธทเธ", 
+    CurrentValue = false, 
+    Flag = "AutoBuySave", 
+    Callback = function(V) 
+        _G.AutoBuySave = V 
+        if V then task.spawn(runAutoDup) end
+    end
+})
+
+Player.CharacterAdded:Connect(function(Character)
+    task.wait(1)
+    if _G.AutoBuySave then runAutoDup() end
+end)
+
+-- Tab 2
+Tab2:CreateToggle({Name = "2 เธเธฑเธ” (เนเธกเนเธ•เนเธญเธเธ–เธทเธญเธเธทเธ)", CurrentValue = false, Flag = "AutoShoot", Callback = function(V) _G.AutoShoot = V end})
+task.spawn(function()
+    while true do
+        if _G.AutoShoot then
+            local t = getBestTarget()
+            if t and t.Character then
+                local pos = t.Character[_G.AimPart].Position + (t.Character[_G.AimPart].Velocity * 0.16)
+                if isSafeToShoot(pos) then
+                    for _, tool in pairs(Player.Backpack:GetChildren()) do if tool:FindFirstChild("shot") then tool.shot:FireServer(pos) end end
+                end
+            end
+        end
+        task.wait(0.0001)
+    end
+end)
+
+Tab2:CreateDropdown({Name = "เน€เธฅเธทเธญเธเนเธซเธกเธ”เธเธฒเธฃเธงเธเธเธทเธ", Options = {"1 เธเธฃเธฐเธเธญเธ", "2 เธเธฃเธฐเธเธญเธ"}, CurrentOption = {"1 เธเธฃเธฐเธเธญเธ"}, Callback = function(O) _G.V2Mode = O[1] end})
+Tab2:CreateToggle({Name = "เนเธเธเธฃเธฑเธง", CurrentValue = false, Flag = "V2Shoot", Callback = function(V) _G.V2Shoot = V end})
+task.spawn(function()
+    while true do
+        if _G.V2Shoot then
+            local t = getBestTarget()
+            if t and t.Character then
+                local pos = t.Character[_G.AimPart].Position + (t.Character[_G.AimPart].Velocity * 0.16)
+                if isSafeToShoot(pos) then
+                    local guns = {}
+                    for _, tool in pairs(Player.Backpack:GetChildren()) do if tool.Name == "Gun" then table.insert(guns, tool) end end
+                    local step = (_G.V2Mode == "2 เธเธฃเธฐเธเธญเธ") and 2 or 1
+                    for i = 1, #guns, step do
+                        if not _G.V2Shoot then break end
+                        local g1, g2 = guns[i], guns[i+1]
+                        if g1 then g1.Parent = Player.Character end if g2 then g2.Parent = Player.Character end
+                        if g1 and g1:FindFirstChild("shot") then g1.shot:FireServer(pos) end if g2 and g2:FindFirstChild("shot") then g2.shot:FireServer(pos) end
+                        task.wait(0.001)
+                        if g1 then g1.Parent = Player.Backpack end if g2 then g2.Parent = Player.Backpack end
+                    end
+                end
+            end
+        end
+        task.wait(0.0001)
+    end
+end)
+
+-- Tab 3
+Tab3:CreateToggle({Name = "เธเนเธญเธเธเธฑเธเน€เธเธทเนเธญเธ", CurrentValue = false, Flag = "AntiFriend", Callback = function(V) _G.AntiFriend = V end})
+
+-- Tab 4
+Tab4:CreateInput({Name = "เธฃเธฐเธเธธเธเธทเนเธญเน€เธเนเธฒเธซเธกเธฒเธขเน€เธ”เธตเนเธขเธง", PlaceholderText = "เนเธชเนเธเธทเนเธญเธเธนเนเน€เธฅเนเธ...", Callback = function(T) _G.SpecificTarget = T end})
+Tab4:CreateToggle({Name = "เธงเธฒเธฃเนเธเธ—เธฑเนเธเนเธกเธ", CurrentValue = false, Flag = "AutoOrbit", Callback = function(V) _G.AutoOrbit = V end})
+task.spawn(function()
+    local a = 0
+    while true do
+        if _G.AutoOrbit then
+            local t = getBestTarget()
+            if t and t.Character and t.Character:FindFirstChild("HumanoidRootPart") then
+                a = a + 0.5
+                Player.Character.HumanoidRootPart.CFrame = CFrame.new(t.Character.HumanoidRootPart.Position + Vector3.new(math.cos(a)*12, math.sin(a*0.8)*8, math.sin(a)*12), t.Character.HumanoidRootPart.Position)
+                if t.Character.Humanoid.Health <= 0 then _G.SpecificTarget = "" end
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end)
+
+-- Tab 5
+Tab5:CreateColorPicker({Name = "เธเธฃเธฑเธเธชเธตเธเธญเธ GUI เธฅเธญเธข", Color = _G.FloatingColor, Callback = function(C) _G.FloatingColor = C end})
+Tab5:CreateToggle({Name = "เน€เธเธดเธ”เนเธซเธกเธ”เธฃเธธเนเธ (Rainbow)", CurrentValue = false, Callback = function(V) _G.RainbowMode = V end})
+Tab5:CreateSection("เธชเธฃเนเธฒเธเธเธธเนเธกเธฅเธญเธขเธเธงเธเธเธธเธก")
+Tab5:CreateButton({Name = "เธเธธเนเธกเธฅเธญเธข: เธญเธญเนเธ•เนเธ”เธนเธเธเธทเธ", Callback = function() createFloatingGUI("AutoDup", "AutoBuySave") end})
+Tab5:CreateButton({Name = "เธเธธเนเธกเธฅเธญเธข: เธขเธดเธ 2 เธเธฑเธ”", Callback = function() createFloatingGUI("Shoot2", "AutoShoot") end})
+Tab5:CreateButton({Name = "เธเธธเนเธกเธฅเธญเธข: เธขเธดเธเธฃเธฑเธง V2", Callback = function() createFloatingGUI("V2Fire", "V2Shoot") end})
+Tab5:CreateButton({Name = "เธเธธเนเธกเธฅเธญเธข: เธงเธฒเธฃเนเธเธเธดเน€เธจเธฉ (เนเธชเนเธเธทเนเธญ)", Callback = function() createFloatingGUI("Orbit HUD", "AutoOrbit", true) end})
+
+-- Tab 6
+Tab6:CreateToggle({Name = "เน€เธเธดเธ”เนเธเนเธเธฒเธเน€เธชเนเธเธเธตเนเน€เธเนเธฒ", CurrentValue = false, Callback = function(V) _G.ShowTracer = V end})
+Tab6:CreateColorPicker({Name = "เธเธฃเธฑเธเธชเธตเน€เธชเนเธ", Color = _G.TracerColor, Callback = function(C) _G.TracerColor = C end})
+Tab6:CreateToggle({Name = "เน€เธชเนเธเธชเธตเธฃเธธเนเธ (Rainbow Tracer)", CurrentValue = false, Callback = function(V) _G.TracerRainbow = V end})
+
+Rayfield:Notify({Title = "เธฃเธฐเธเธเนเธ”เธข JOHN", Content = "เน€เธเนเธฒเธชเธนเนเธชเธเธฃเธดเธเธชเธณเน€เธฃเนเธ ๐", Duration = 5, Image = 4483362458})
